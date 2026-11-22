@@ -11,9 +11,6 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        'background/service-worker': resolve(__dirname, 'src/background/service-worker.ts'),
-        'content/content': resolve(__dirname, 'src/content/content.ts'),
-        popup: resolve(__dirname, 'src/popup/index.html'),
         options: resolve(__dirname, 'src/options/index.html'),
       },
       output: {

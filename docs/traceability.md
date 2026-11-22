@@ -4,9 +4,15 @@
 
 | 要件 | 基本設計 | 詳細設計 | テスト設計 | 実装 | テストコード |
 |---|---|---|---|---|---|
-| FR-001 (approved) （サンプル）クリック回数のカウント | BD-001 (approved) | DD-counter-001 (review) | TS-001 (draft) | `src/background/service-worker.ts`<br>`src/content/content.ts`<br>`src/popup/main.ts`<br>`src/shared/chrome/storage.ts`<br>`src/shared/counter.ts`<br>`src/shared/messages.ts` | `tests/e2e/popup.spec.ts`<br>`tests/unit/counter.test.ts` |
+| FR-002 (draft) ページに関連するタスクの登録 | **なし** | - | **なし** | - | - |
+| FR-003 (draft) 登録済みタスクの管理 | **なし** | - | **なし** | - | - |
+| FR-004 (draft) 対象ドメインでのタスクリマインド | **なし** | - | **なし** | - | - |
 
-## 検出された問題（2 件）
+## 検出された問題（6 件）
 
-- 未承認の設計に基づくコード/テストがあります: DD-counter-001(review) ← src/background/service-worker.ts, src/content/content.ts, src/popup/main.ts, src/shared/chrome/storage.ts, src/shared/counter.ts, src/shared/messages.ts
-- 未承認の設計に基づくコード/テストがあります: TS-001(draft) ← tests/e2e/popup.spec.ts, tests/unit/counter.test.ts
+- 基本設計に未反映の要件: FR-002
+- テスト設計の無い要件: FR-002
+- 基本設計に未反映の要件: FR-003
+- テスト設計の無い要件: FR-003
+- 基本設計に未反映の要件: FR-004
+- テスト設計の無い要件: FR-004

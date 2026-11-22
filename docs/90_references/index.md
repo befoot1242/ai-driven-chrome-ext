@@ -30,3 +30,7 @@
 | REF-023 | tldts | tldts contributors | https://github.com/remusao/tldts | - | 2026-11-23 | BD-001、ADR-0004 | 共有サービスを含む PSL 判定と URL 正規化 |
 | REF-024 | Public Suffix List data | Public Suffix List | https://publicsuffix.org/list/public_suffix_list.dat | - | 2026-11-23 | ADR-0004 | PSL の元データのライセンス |
 | REF-025 | tldts license | tldts contributors | https://github.com/remusao/tldts/blob/master/LICENSE | - | 2026-11-23 | ADR-0004 | tldts 本体のライセンス |
+| REF-026 | Chrome DevTools Performance | Google | https://developer.chrome.com/docs/devtools/performance | Chrome 129 の説明 | 2026-11-23 | BD-001 | Chrome の性能記録・分析 |
+| REF-027 | vue package metadata | npm | https://registry.npmjs.org/vue/3.5.46 | 3.5.46 | 2026-11-23 | ADR-0002 | バージョン・ライセンス・依存関係 |
+| REF-028 | tldts package metadata | npm | https://registry.npmjs.org/tldts/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | バージョン・ライセンス・依存関係 |
+| REF-029 | tldts-core package metadata | npm | https://registry.npmjs.org/tldts-core/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | 依存パッケージのライセンス |

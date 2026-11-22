@@ -4,14 +4,14 @@
 
 | 要件 | 基本設計 | 詳細設計 | テスト設計 | 実装 | テストコード |
 |---|---|---|---|---|---|
-| FR-002 (approved) ページに関連するタスクの登録 | BD-001 (review) | - | **なし** | - | - |
-| FR-003 (approved) 登録済みタスクの管理 | BD-001 (review) | - | **なし** | - | - |
-| FR-004 (approved) 対象ドメインでのタスクリマインド | BD-001 (review) | - | **なし** | - | - |
-| NFR-AVL-001 (approved) 端末内の保存容量 | BD-001 (review) | - | **なし** | - | - |
-| NFR-AVL-002 (approved) 端末内データの保持 | BD-001 (review) | - | **なし** | - | - |
-| NFR-CMP-001 (approved) 対応ブラウザ | BD-001 (review) | - | **なし** | - | - |
-| NFR-PERF-001 (approved) リマインドの表示時間 | BD-001 (review) | - | **なし** | - | - |
-| NFR-SEC-001 (approved) タスクデータの外部送信禁止 | BD-001 (review) | - | **なし** | - | - |
+| FR-002 (approved) ページに関連するタスクの登録 | BD-001 (approved) | - | **なし** | - | - |
+| FR-003 (approved) 登録済みタスクの管理 | BD-001 (approved) | - | **なし** | - | - |
+| FR-004 (approved) 対象ドメインでのタスクリマインド | BD-001 (approved) | - | **なし** | - | - |
+| NFR-AVL-001 (approved) 端末内の保存容量 | BD-001 (approved) | - | **なし** | - | - |
+| NFR-AVL-002 (approved) 端末内データの保持 | BD-001 (approved) | - | **なし** | - | - |
+| NFR-CMP-001 (approved) 対応ブラウザ | BD-001 (approved) | - | **なし** | - | - |
+| NFR-PERF-001 (approved) リマインドの表示時間 | BD-001 (approved) | - | **なし** | - | - |
+| NFR-SEC-001 (approved) タスクデータの外部送信禁止 | BD-001 (approved) | - | **なし** | - | - |
 
 ## 検出された問題（8 件）
 

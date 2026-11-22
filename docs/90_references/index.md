@@ -34,3 +34,5 @@
 | REF-027 | vue package metadata | npm | https://registry.npmjs.org/vue/3.5.46 | 3.5.46 | 2026-11-23 | ADR-0002 | バージョン・ライセンス・依存関係 |
 | REF-028 | tldts package metadata | npm | https://registry.npmjs.org/tldts/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | バージョン・ライセンス・依存関係 |
 | REF-029 | tldts-core package metadata | npm | https://registry.npmjs.org/tldts-core/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | 依存パッケージのライセンス |
+| REF-030 | IDBTransaction | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction | - | 2026-11-23 | DD-task-001 | トランザクションの順序と有効期間 |
+| REF-031 | Runtime API | Google | https://developer.chrome.com/docs/extensions/reference/api/runtime | - | 2026-11-23 | DD-capture-001 | メッセージ送信元情報の取得 |

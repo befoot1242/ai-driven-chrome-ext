@@ -36,3 +36,6 @@
 | REF-029 | tldts-core package metadata | npm | https://registry.npmjs.org/tldts-core/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | 依存パッケージのライセンス |
 | REF-030 | IDBTransaction | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction | - | 2026-11-23 | DD-task-001 | トランザクションの順序と有効期間 |
 | REF-031 | Runtime API | Google | https://developer.chrome.com/docs/extensions/reference/api/runtime | - | 2026-11-23 | DD-capture-001 | メッセージ送信元情報の取得 |
+| REF-032 | Temporal.ZonedDateTime.from() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/ZonedDateTime/from | - | 2026-11-23 | DD-task-001 | 現地日時の欠落・重複時の変換と範囲外入力の扱い |
+| REF-033 | Temporal.Now.timeZoneId() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/Now/timeZoneId | - | 2026-11-23 | DD-task-001 | 端末のタイムゾーン識別子の取得 |
+| REF-034 | New in Chrome 144 | Google | https://developer.chrome.com/blog/new-in-chrome-144 | Chrome 144 | 2026-11-23 | DD-task-001 | Chrome における Temporal API の導入 |

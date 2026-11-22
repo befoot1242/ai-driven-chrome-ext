@@ -25,3 +25,5 @@
 | REF-018 | Web accessible resources | Google | https://developer.chrome.com/docs/extensions/reference/manifest/web-accessible-resources | - | 2026-11-23 | BD-001 | ページへ公開される拡張機能リソース |
 | REF-019 | Message passing | Google | https://developer.chrome.com/docs/extensions/develop/concepts/messaging | - | 2026-11-23 | BD-001 | コンテキスト間通信 |
 | REF-020 | Storage API | Google | https://developer.chrome.com/docs/extensions/reference/api/storage | - | 2026-11-23 | ADR-0003 | chrome.storage の制限 |
+| REF-021 | Windows API | Google | https://developer.chrome.com/docs/extensions/reference/api/windows | - | 2026-11-23 | BD-001 | 独立したウィンドウの作成・管理 |
+| REF-022 | Commands API | Google | https://developer.chrome.com/docs/extensions/reference/api/commands | - | 2026-11-23 | BD-001 | キーボードショートカット |

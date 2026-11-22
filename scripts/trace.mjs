@@ -10,8 +10,9 @@
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CHECK = process.argv.includes('--check');
 const SKIP_DOCS = new Set(['_template.md', 'README.md', 'index.md', 'traceability.md']);
 const STATUSES = ['draft', 'review', 'approved', 'deprecated'];
@@ -25,14 +26,26 @@ const walk = (dir) =>
 const rel = (p) => relative(ROOT, p).split(sep).join('/');
 
 // ---- 1. 設計書の front matter を読む ----
-function parseFrontMatter(text) {
+function parseFrontMatter(text, file) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
   const fm = {};
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^(\w+):\s*(.*?)\s*(#.*)?$/);
+  const lines = m[1].split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const kv = lines[i].match(/^(\w+):\s*(.*?)\s*(#.*)?$/);
     if (!kv) continue;
     let v = kv[2].replace(/^["']|["']$/g, '');
+    if (kv[1] === 'trace') {
+      if (!v && i + 1 < lines.length && /^\s+\[/.test(lines[i + 1])) {
+        v = lines[++i].trim();
+      }
+      while (v.startsWith('[') && !v.includes(']') && i + 1 < lines.length && /^\s/.test(lines[i + 1])) {
+        v += lines[++i].trim();
+      }
+      if (!v.startsWith('[') || !v.endsWith(']')) {
+        throw new Error(`trace の配列が不正です: ${rel(file)}`);
+      }
+    }
     if (v.startsWith('[')) {
       v = v.slice(1, -1).split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
     }
@@ -46,7 +59,7 @@ const problems = [];
 
 for (const file of walk(join(ROOT, 'docs')).filter((f) => f.endsWith('.md'))) {
   if (SKIP_DOCS.has(file.split(sep).pop()) || rel(file).startsWith('docs/00_steering/')) continue;
-  const fm = parseFrontMatter(readFileSync(file, 'utf8'));
+  const fm = parseFrontMatter(readFileSync(file, 'utf8'), file);
   if (!fm?.id) {
     problems.push(`front matter に id がありません: ${rel(file)}`);
     continue;

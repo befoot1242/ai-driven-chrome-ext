@@ -27,3 +27,6 @@
 | REF-020 | Storage API | Google | https://developer.chrome.com/docs/extensions/reference/api/storage | - | 2026-11-23 | ADR-0003 | chrome.storage の制限 |
 | REF-021 | Windows API | Google | https://developer.chrome.com/docs/extensions/reference/api/windows | - | 2026-11-23 | BD-001 | 独立したウィンドウの作成・管理 |
 | REF-022 | Commands API | Google | https://developer.chrome.com/docs/extensions/reference/api/commands | - | 2026-11-23 | BD-001 | キーボードショートカット |
+| REF-023 | tldts | tldts contributors | https://github.com/remusao/tldts | - | 2026-11-23 | BD-001、ADR-0004 | 共有サービスを含む PSL 判定と URL 正規化 |
+| REF-024 | Public Suffix List data | Public Suffix List | https://publicsuffix.org/list/public_suffix_list.dat | - | 2026-11-23 | ADR-0004 | PSL の元データのライセンス |
+| REF-025 | tldts license | tldts contributors | https://github.com/remusao/tldts/blob/master/LICENSE | - | 2026-11-23 | ADR-0004 | tldts 本体のライセンス |

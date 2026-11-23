@@ -69,7 +69,7 @@ type MessageResponse =
 | `OPEN_REGISTRATION`                        | Service Worker → 登録画面               | 起動した操作と対象の対応を確認する識別情報               |
 | `TASK_QUERY` / `TASK_SAVE` / `TASK_DELETE` | 登録・一覧画面 → Service Worker         | 対象、検索条件、保存要求、または削除要求                 |
 | `SUPPRESSION_UPDATE`                       | 一覧・リマインド画面 → Service Worker   | 停止対象、終了日時または解除                             |
-| `CAPTURE_REQUEST`                          | 登録・一覧画面 → Service Worker         | 撮影対象・範囲・操作の識別情報                           |
+| `CAPTURE_REQUEST`                          | 登録・撮影用独立画面 → Service Worker   | 撮影対象・範囲・操作の識別情報                           |
 | `CAPTURE_RESULT`                           | Service Worker → 要求元画面             | 撮影操作の識別情報、結果またはエラー。画像本体は含めない |
 | `CAPTURE_SCROLL`                           | Service Worker ↔ 対象の content script  | スクロール指示、対象文書と必要な位置・サイズ、結果       |
 | `NAVIGATION_CHANGED`                       | Service Worker → 対応するリマインド画面 | 更新対象の識別情報                                       |
@@ -133,7 +133,8 @@ type MessageResponse =
 
 ## 変更履歴
 
-| 日付       | 変更者 | 内容                                               |
-| ---------- | ------ | -------------------------------------------------- |
-| 2026-11-23 | AI     | 初版案                                             |
-| 2026-11-23 | AI     | 送信元・コンテキスト情報と保存領域の境界を仕様確認 |
+| 日付       | 変更者 | 内容                                                     |
+| ---------- | ------ | -------------------------------------------------------- |
+| 2026-11-23 | AI     | 初版案                                                   |
+| 2026-11-23 | AI     | 送信元・コンテキスト情報と保存領域の境界を仕様確認       |
+| 2026-11-23 | AI     | 独立撮影画面を要求元に反映し、再確認のため review に変更 |

@@ -31,15 +31,15 @@
 | REF-024 | Public Suffix List data | Public Suffix List | https://publicsuffix.org/list/public_suffix_list.dat | - | 2026-11-23 | ADR-0004 | PSL の元データのライセンス |
 | REF-025 | tldts license | tldts contributors | https://github.com/remusao/tldts/blob/master/LICENSE | - | 2026-11-23 | ADR-0004 | tldts 本体のライセンス |
 | REF-026 | Chrome DevTools Performance | Google | https://developer.chrome.com/docs/devtools/performance | Chrome 129 の説明 | 2026-11-23 | BD-001 | Chrome の性能記録・分析 |
-| REF-027 | vue package metadata | npm | https://registry.npmjs.org/vue/3.5.46 | 3.5.46 | 2026-11-23 | ADR-0002 | バージョン・ライセンス・依存関係 |
-| REF-028 | tldts package metadata | npm | https://registry.npmjs.org/tldts/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | バージョン・ライセンス・依存関係 |
+| REF-027 | vue package metadata | npm | https://registry.npmjs.org/vue/3.5.46 | 3.5.46 | 2026-11-23 | ADR-0002 | バージョン・ライセンス・依存関係。隔離環境で Vue のランタイム関数を試作バンドルした結果、Vue と runtime-dom・runtime-core・reactivity・shared の各 3.5.46 を含み、各パッケージに MIT ライセンスファイルが存在した。実際の成果物の同梱確認ではない |
+| REF-028 | tldts package metadata | npm | https://registry.npmjs.org/tldts/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | バージョン・ライセンス・依存関係。隔離環境で `tldts-core` 7.5.5 とともに試作バンドルした結果を確認した。実際の成果物の配布条件を確定したものではない |
 | REF-029 | tldts-core package metadata | npm | https://registry.npmjs.org/tldts-core/7.5.5 | 7.5.5 | 2026-11-23 | ADR-0004 | 依存パッケージのライセンス |
 | REF-030 | IDBTransaction | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction | - | 2026-11-23 | DD-task-001 | トランザクションの順序と有効期間 |
-| REF-031 | Runtime API | Google | https://developer.chrome.com/docs/extensions/reference/api/runtime | - | 2026-11-23 | DD-capture-001 | メッセージ送信元情報の取得 |
+| REF-031 | Runtime API | Google | https://developer.chrome.com/docs/extensions/reference/api/runtime | - | 2026-11-23 | DD-capture-001、DD-communication-001 | メッセージ送信元情報の取得。Chrome for Testing 159 の検証では独立ウィンドウの送信元に `documentId`・`tab` があったが、アクション popup の送信元には両方なかった。popup の `getContexts()` には `documentId` があり、それだけで送信元との対応は証明できない |
 | REF-032 | Temporal.ZonedDateTime.from() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/ZonedDateTime/from | - | 2026-11-23 | DD-task-001 | 現地日時の欠落・重複時の変換と範囲外入力の扱い |
 | REF-033 | Temporal.Now.timeZoneId() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/Now/timeZoneId | - | 2026-11-23 | DD-task-001 | 端末のタイムゾーン識別子の取得 |
 | REF-034 | New in Chrome 144 | Google | https://developer.chrome.com/blog/new-in-chrome-144 | Chrome 144 | 2026-11-23 | DD-task-001 | Chrome における Temporal API の導入 |
-| REF-035 | Action API | Google | https://developer.chrome.com/docs/extensions/reference/api/action | - | 2026-11-23 | DD-reminder-001、DD-capture-001 | アイコン・popup・バッジの動作 |
+| REF-035 | Action API | Google | https://developer.chrome.com/docs/extensions/reference/api/action | - | 2026-11-23 | DD-reminder-001、DD-capture-001、DD-communication-001 | アイコン・popup・バッジの動作。Chrome for Testing 159 では `setPopup` でタブ別に設定した識別子付き URL が popup の送信元と `getContexts()` に一致し、Worker の強制停止後も1回確認できた。所有者認証・競合防止の成立は未確認 |
 | REF-036 | IndexedDB upgradeneeded event | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBOpenDBRequest/upgradeneeded_event | - | 2026-11-23 | DD-task-001 | スキーマの版更新 |
 | REF-037 | IndexedDB versionchange event | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/versionchange_event | - | 2026-11-23 | DD-task-001 | 他の接続への版更新通知 |
 | REF-038 | IndexedDB transaction abort | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction/abort | - | 2026-11-23 | DD-task-001 | トランザクション中止と変更の巻き戻し |
@@ -65,3 +65,4 @@
 | REF-058 | Mozilla Public License | Mozilla | https://www.mozilla.org/en-US/MPL/2.0/ | 2.0 | 2026-11-23 | DD-reminder-001 | 配布時の条件 |
 | REF-059 | tldts generated trie source | tldts contributors | https://raw.githubusercontent.com/remusao/tldts/30f32825e9b587489b21e0ac70370c59ee3f6412/packages/tldts/src/data/trie.ts | commit 30f3282 | 2026-11-23 | DD-reminder-001 | 候補コミット内の生成データ |
 | REF-060 | tldts packaged trie source | npm / UNPKG | https://unpkg.com/tldts@7.5.5/src/data/trie.ts | 7.5.5 | 2026-11-23 | DD-reminder-001 | 配布パッケージ内の生成データ |
+| REF-061 | tldts が参照する PSL の固定版 | Public Suffix List | https://raw.githubusercontent.com/publicsuffix/list/09c1b150f33c6145a73afcf7db0fb872fc54b4d1/public_suffix_list.dat | commit 09c1b15 | 2026-11-23 | DD-reminder-001 | REF-055・REF-056 の生成処理を適用した結果は REF-059・REF-060 と SHA-256 が一致。配布条件の確定を意味しない |

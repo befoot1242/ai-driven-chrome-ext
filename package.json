@@ -12,11 +12,20 @@
     "trace:check": "node scripts/trace.mjs --check"
   },
   "devDependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "@playwright/test": "^1.49.0",
     "@types/chrome": "^0.0.287",
     "@types/node": "^22.10.0",
+    "fake-indexeddb": "6.2.4",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "tldts": "7.5.5",
+    "vue": "3.5.46"
+  },
+  "overrides": {
+    "tldts-core": "7.5.5"
   }
 }

@@ -1,0 +1,14 @@
+@trace DD-reminder-001 DD-task-002
+
+第三者コンポーネント
+
+本プロジェクトで使用する tldts 7.5.5、tldts-core 7.5.5、Vue 3.5.46 および
+Vue ランタイムコンポーネント 3.5.46 の各 MIT ライセンスの
+著作権表示と許諾条件は third-party-licenses/ に収録しています。
+
+tldts の判定データは Public Suffix List を基に生成されています。
+元データに適用される Mozilla Public License 2.0 の条件にも従います。
+ライセンス: https://www.mozilla.org/en-US/MPL/2.0/
+元データ: https://raw.githubusercontent.com/publicsuffix/list/09c1b150f33c6145a73afcf7db0fb872fc54b4d1/public_suffix_list.dat
+生成データのソース: https://unpkg.com/tldts@7.5.5/src/data/trie.ts
+生成処理のソース: https://github.com/remusao/tldts/tree/30f32825e9b587489b21e0ac70370c59ee3f6412/packages/tldts-utils/src

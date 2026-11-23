@@ -24,10 +24,12 @@
 npm install
 npx playwright install chromium   # E2E を使う場合
 npm run lint && npm run test && npm run build
+npm run test:e2e
 npm run trace
 ```
 
-サンプルのカウンターは削除済みです。タスク管理機能は要件・設計の承認後に実装します。
+E2E はビルド済みの拡張機能を Playwright の Chromium に読み込んで実行します。
+現時点の E2E は通信の異常系のみで、タスク管理機能全体の動作を確認したものではありません。
 
 ## 開発の流れ（1 機能あたり）
 

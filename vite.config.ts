@@ -1,4 +1,4 @@
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
@@ -11,6 +11,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
+        background: resolve(__dirname, 'src/background/service-worker.ts'),
         options: resolve(__dirname, 'src/options/index.html'),
       },
       output: {
@@ -25,6 +26,29 @@ export default defineConfig({
       name: 'copy-manifest',
       closeBundle() {
         copyFileSync(resolve(__dirname, 'src/manifest.json'), resolve(__dirname, 'dist/manifest.json'));
+      },
+    },
+    {
+      name: 'copy-third-party-licenses',
+      closeBundle() {
+        const output = resolve(__dirname, 'dist/third-party-licenses');
+        mkdirSync(output, { recursive: true });
+        const packages = [
+          ['tldts', 'tldts'],
+          ['tldts-core', 'tldts-core'],
+          ['vue', 'vue'],
+          ['@vue/shared', 'vue-shared'],
+          ['@vue/reactivity', 'vue-reactivity'],
+          ['@vue/runtime-core', 'vue-runtime-core'],
+          ['@vue/runtime-dom', 'vue-runtime-dom'],
+        ];
+        for (const [source, target] of packages) {
+          if (!source || !target) throw new Error('ライセンスのコピー先が不正です。');
+          copyFileSync(
+            resolve(__dirname, 'node_modules', source, 'LICENSE'),
+            resolve(output, `${target}.txt`),
+          );
+        }
       },
     },
   ],

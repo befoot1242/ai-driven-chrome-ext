@@ -4,5 +4,9 @@
   "version": "0.1.0",
   "description": "TODO: 説明",
   "minimum_chrome_version": "120",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "options_page": "options/index.html"
 }

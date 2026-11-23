@@ -3,6 +3,7 @@ import { sameDomainKey, type DomainKey } from "../shared/domain-types";
 import { getDomainKeyFromHostname, normalizeHostname } from "../shared/domain";
 import { validateImageLimits } from "../shared/image-validation";
 import type { DomainSuppressionRecord, ImageRecord, TaskRecord } from "../shared/task-types";
+import { validateTaskForm } from "../shared/task-validation";
 import { isUtcInstant } from "../shared/utc-instant";
 
 type RepositoryErrorCode =
@@ -101,30 +102,14 @@ async function transactionResult<T>(
   }
 }
 
-function isValidDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(0);
-  date.setUTCFullYear(year, month - 1, day);
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-}
-
 function validateTask(task: TaskRecord, images: readonly ImageRecord[]): string {
-  let url: URL;
-  try {
-    url = new URL(task.url);
-  } catch (error) {
-    if (error instanceof TypeError) throw new TaskRepositoryError("INVALID_TASK");
-    throw error;
-  }
+  const { errors, hostname } = validateTaskForm(task);
   if (
     !task.id ||
-    !task.name.trim() ||
-    (url.protocol !== "http:" && url.protocol !== "https:") ||
-    (task.dueDate !== null && !isValidDate(task.dueDate)) ||
+    errors.name !== undefined ||
+    errors.url !== undefined ||
+    errors.dueDate !== undefined ||
+    hostname === null ||
     !isUtcInstant(task.createdAt) ||
     (task.reminderSuppressedUntil !== null && !isUtcInstant(task.reminderSuppressedUntil)) ||
     !Number.isInteger(task.revision) ||
@@ -150,7 +135,7 @@ function validateTask(task: TaskRecord, images: readonly ImageRecord[]): string 
     }
     ids.add(image.id);
   }
-  return url.hostname;
+  return hostname;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

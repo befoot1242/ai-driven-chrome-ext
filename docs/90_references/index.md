@@ -39,3 +39,29 @@
 | REF-032 | Temporal.ZonedDateTime.from() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/ZonedDateTime/from | - | 2026-11-23 | DD-task-001 | 現地日時の欠落・重複時の変換と範囲外入力の扱い |
 | REF-033 | Temporal.Now.timeZoneId() | MDN | https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/Now/timeZoneId | - | 2026-11-23 | DD-task-001 | 端末のタイムゾーン識別子の取得 |
 | REF-034 | New in Chrome 144 | Google | https://developer.chrome.com/blog/new-in-chrome-144 | Chrome 144 | 2026-11-23 | DD-task-001 | Chrome における Temporal API の導入 |
+| REF-035 | Action API | Google | https://developer.chrome.com/docs/extensions/reference/api/action | - | 2026-11-23 | DD-reminder-001、DD-capture-001 | アイコン・popup・バッジの動作 |
+| REF-036 | IndexedDB upgradeneeded event | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBOpenDBRequest/upgradeneeded_event | - | 2026-11-23 | DD-task-001 | スキーマの版更新 |
+| REF-037 | IndexedDB versionchange event | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/versionchange_event | - | 2026-11-23 | DD-task-001 | 他の接続への版更新通知 |
+| REF-038 | IndexedDB transaction abort | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction/abort | - | 2026-11-23 | DD-task-001 | トランザクション中止と変更の巻き戻し |
+| REF-039 | IndexedDB blocked event | MDN | https://developer.mozilla.org/en-US/docs/Web/API/IDBOpenDBRequest/blocked_event | - | 2026-11-23 | DD-task-001 | 他の接続による版更新の待機 |
+| REF-040 | Chrome DevTools Performance timeline reference | Google | https://developer.chrome.com/docs/devtools/performance/timeline-reference | - | 2026-11-23 | DD-reminder-001 | 描画・イベントのトレース |
+| REF-041 | tldts package license | npm / UNPKG | https://unpkg.com/tldts@7.5.5/LICENSE | 7.5.5 | 2026-11-23 | DD-reminder-001 | 配布パッケージのライセンスファイル |
+| REF-042 | tldts-core package license | npm / UNPKG | https://unpkg.com/tldts-core@7.5.5/LICENSE | 7.5.5 | 2026-11-23 | DD-reminder-001 | 依存パッケージのライセンスファイル |
+| REF-043 | tldts package contents | npm / UNPKG | https://unpkg.com/tldts@7.5.5/?meta | 7.5.5 | 2026-11-23 | DD-reminder-001 | 配布パッケージのファイル一覧 |
+| REF-044 | Vue package license | npm / UNPKG | https://unpkg.com/vue@3.5.46/LICENSE | 3.5.46 | 2026-11-23 | DD-task-002 | 配布パッケージのライセンスファイル |
+| REF-045 | URL.createObjectURL() | MDN | https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static | - | 2026-11-23 | DD-task-002 | 画像表示用 URL の作成と Worker の制限 |
+| REF-046 | URL.revokeObjectURL() | MDN | https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static | - | 2026-11-23 | DD-task-002 | 画像表示用 URL の解放 |
+| REF-047 | Extension service worker lifecycle | Google | https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle | - | 2026-11-23 | DD-reminder-001 | Worker の停止と状態の永続化 |
+| REF-048 | End-to-end testing | Google | https://developer.chrome.com/docs/extensions/how-to/test/end-to-end-testing | - | 2026-11-23 | DD-reminder-001 | 拡張機能と Worker 停止の試験環境 |
+| REF-049 | Test service worker termination | Google | https://developer.chrome.com/docs/extensions/how-to/test/test-serviceworker-termination-with-puppeteer | - | 2026-11-23 | DD-reminder-001 | Worker 終了テストの例 |
+| REF-050 | MutationObserver | MDN | https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver | - | 2026-11-23 | DD-capture-001 | DOM ツリー変更の監視対象 |
+| REF-051 | Same-origin policy | MDN | https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy | - | 2026-11-23 | DD-capture-001、DD-communication-001 | 異なるオリジンと保存領域の境界 |
+| REF-052 | requestAnimationFrame | MDN | https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame | - | 2026-11-23 | DD-reminder-001 | コールバックと再描画の順序 |
+| REF-053 | DevTools Performance reference | Google | https://developer.chrome.com/docs/devtools/performance/reference | - | 2026-11-23 | DD-reminder-001 | トレースとスクリーンショット |
+| REF-054 | Performance.timeOrigin | MDN | https://developer.mozilla.org/en-US/docs/Web/API/Performance/timeOrigin | - | 2026-11-23 | DD-reminder-001 | 異なるコンテキストの時間原点 |
+| REF-055 | tldts data update source | tldts contributors | https://github.com/remusao/tldts/blob/30f32825e9b587489b21e0ac70370c59ee3f6412/packages/tldts-utils/src/update.ts | commit 30f3282 | 2026-11-23 | DD-reminder-001 | PSL から trie を生成する処理 |
+| REF-056 | tldts PSL loader source | tldts contributors | https://github.com/remusao/tldts/blob/30f32825e9b587489b21e0ac70370c59ee3f6412/packages/tldts-utils/src/list.ts | commit 30f3282 | 2026-11-23 | DD-reminder-001 | PSL ファイルの読み込み |
+| REF-057 | tldts source tree | tldts contributors | https://api.github.com/repos/remusao/tldts/git/trees/30f32825e9b587489b21e0ac70370c59ee3f6412 | commit 30f3282 | 2026-11-23 | DD-reminder-001 | PSL サブモジュールの識別 |
+| REF-058 | Mozilla Public License | Mozilla | https://www.mozilla.org/en-US/MPL/2.0/ | 2.0 | 2026-11-23 | DD-reminder-001 | 配布時の条件 |
+| REF-059 | tldts generated trie source | tldts contributors | https://raw.githubusercontent.com/remusao/tldts/30f32825e9b587489b21e0ac70370c59ee3f6412/packages/tldts/src/data/trie.ts | commit 30f3282 | 2026-11-23 | DD-reminder-001 | 候補コミット内の生成データ |
+| REF-060 | tldts packaged trie source | npm / UNPKG | https://unpkg.com/tldts@7.5.5/src/data/trie.ts | 7.5.5 | 2026-11-23 | DD-reminder-001 | 配布パッケージ内の生成データ |

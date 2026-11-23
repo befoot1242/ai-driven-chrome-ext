@@ -59,17 +59,38 @@ interface DomainSuppressionRecord {
   suppressedUntil: string;
 }
 
-interface EditDraft {
+interface DraftFields {
+  name: string;
+  url: string;
+  dueDate: string;
+  detail: string;
+}
+
+interface Draft {
   id: DraftId;
+  kind: "registration" | "edit";
   taskId: TaskId;
-  baseRevision: number;
-  task: TaskRecord;
+  baseRevision: number | null;
+  fields: DraftFields;
   images: ImageRecord[];
+}
+
+interface ActiveOperation {
+  id: string;
+  generation: number;
+  kind: "registration" | "edit";
+  draftId: DraftId;
+}
+
+interface OperationRef {
+  id: string;
+  generation: number;
 }
 
 interface CaptureTemporaryRecord {
   requestId: string;
   owner: { kind: "registration" | "edit"; id: string };
+  operation: OperationRef;
   status: "pending" | "ready" | "error";
   imageId: ImageId | null;
   image: Blob | null;
@@ -82,16 +103,13 @@ interface TaskRepository {
     id: TaskId,
   ): Promise<{ task: TaskRecord; images: ImageRecord[] } | null>;
   listTasks(): Promise<TaskRecord[]>;
-  saveTask(
-    task: TaskRecord,
-    images: ImageRecord[],
-    expectedRevision: number | null,
-  ): Promise<TaskRecord>;
   deleteTask(id: TaskId, expectedRevision: number): Promise<void>;
-  saveDraft(draft: EditDraft): Promise<void>;
-  getDraft(id: DraftId): Promise<EditDraft | null>;
-  discardDraft(id: DraftId): Promise<void>;
-  commitDraft(id: DraftId): Promise<TaskRecord>;
+  startDraft(draft: Draft): Promise<OperationRef>;
+  getActiveDraft(): Promise<{ operation: OperationRef; draft: Draft } | null>;
+  saveDraft(operation: OperationRef, draft: Draft): Promise<void>;
+  resumeDraft(operation: OperationRef): Promise<OperationRef>;
+  discardDraft(operation: OperationRef): Promise<void>;
+  commitDraft(operation: OperationRef): Promise<TaskRecord>;
   listDomainSuppressions(): Promise<DomainSuppressionRecord[]>;
   updateDomainSuppression(
     hostname: string,
@@ -106,13 +124,13 @@ interface TaskRepository {
 - `createdAt`、`reminderSuppressedUntil`、`suppressedUntil` は UTC の ISO 8601 形式（`YYYY-MM-DDTHH:mm:ss.sssZ`）で保存する。停止終了日時は設定時の端末の現地日時から確定した瞬間に変換し、タイムゾーン変更後も同じ瞬間を維持する。表示時は現在の端末の現地日時に変換する。
 - 夏時間等により存在しない現地日時は再入力を求める。同じ現地日時が２回ある場合は、利用者に UTC オフセットを示してどちらの瞬間か選択してもらい、確定した瞬間を保存する。
 - 画像は１タスクにつき10件まで、１件につき5,000,000バイトまでとする。`position` はタスク内の表示順とする。
-- 新規登録時の `expectedRevision` は `null` とし、保存済みの同一 ID がないことを確認して `revision` を1とする。既存タスクの変更時は読み込み時の `revision` を指定し、一致すれば1増加する。実際の版が一致しない場合は変更を拒否する。既存タスクの `createdAt` は変更しない。
+- 新規登録時の `baseRevision` は `null` とし、保存済みの同一 ID がないことを確認して `revision` を1とする。既存タスクの編集時は読み込み時の `revision` を保持し、一致すれば1増加する。実際の版が一致しない場合は変更を拒否する。既存タスクの `createdAt` は変更しない。
 - `updateDomainSuppression` は対象ホストと、変更後の停止終了日時または解除を表す `null` を受け取る。
 - これらは拡張機能内部の論理インターフェースであり、Chrome メッセージのペイロード型ではない。`Blob` を Chrome メッセージに直接渡す設計ではない。
 
 ## 4. 処理詳細
 
-1. IndexedDB に `tasks`、`images`、`domain_suppressions`、`edit_drafts`、`capture_temp` の各ストアを作成する。各ストアのキーはそれぞれタスク ID、画像 ID、正規化ホスト、一時データ ID、撮影要求 ID とする。`images` はタスク ID、`capture_temp` は所有者の種別と ID で取得できる索引を持つ。
+1. IndexedDB に `tasks`、`images`、`domain_suppressions`、`edit_drafts`、`capture_temp`、`active_operation` の各ストアを作成する。各ストアのキーはそれぞれタスク ID、画像 ID、正規化ホスト、一時データ ID、撮影要求 ID、固定キーとする。`images` はタスク ID、`capture_temp` は所有者の種別と ID で取得できる索引を持つ。登録用の途中入力も `edit_drafts` に保存し、登録・編集の種別と対象を区別する。登録用データの型と操作ごとの API は後述の制限状態に合わせて確定する。
 2. タスクの確定前にタスク名の必須、URL、期限の形式と実在日付、画像の所有タスク・件数・サイズ・ID・表示順の整合性を検証する。画像の表示順は0から始まる連番とする。検証に失敗した場合、確定の書き込みは行わない。編集途中の一時保存では未入力のタスク名を許容し、画像の所有タスク・件数・サイズ・ID・表示順の整合性を検証する。
 3. タスクと画像の保存・削除は同一トランザクションで行う。変更時は現在の版を照合し、画像の削除・追加とタスクの更新をまとめて確定する。版が一致しない場合や書き込みに失敗した場合は全体を中止する。
 4. 撮影前の編集内容は `edit_drafts` に一時保存する。一時保存が成功するまで撮影用タブを開かない。一時データには編集中のタスクと、追加・削除・差し替えを反映した画像一覧を含める。
@@ -125,7 +143,16 @@ interface TaskRepository {
 
 撮影結果の保存は、同じ要求 ID・所有者の `pending` の存在を同一トランザクションで照合してから行う。所有者が要求を無効にした後の遅延結果は書き込まない。編集の保存・取消に伴う `edit_drafts` と `capture_temp` の整理は同一トランザクションで行う案とする。撮影中断時のページ状態の復元確認は IndexedDB の確定とは別であり、その結果の通知と整理手順は未決（DD-capture-001）。
 
-`EditDraft.task` に確定済みの `TaskRecord` を使う案では、入力途中の不正な URL・期限などの文字列をそのまま保持する扱いが定義されていない。撮影前の一時保存では入力内容を保持する必要があるため、確定済みタスクと入力途中の値を分けた型と、その検証・再開方法を確定するまで、入力途中の値を保持できるとは判断しない（DD-task-002）。
+`DraftFields` は入力途中の空文字や不正な URL・期限を文字列のまま保持する。登録時は確定前に割り当てたタスク ID を途中画像の `taskId` に用い、編集時は既存タスク ID と元の版を保持する。タスクとして確定するときに必須・形式・画像を検証する。保存可能な文字数は未決であり、制限を超える入力を黙って切り詰めない（DD-task-002）。
+
+### 登録・編集の制限状態と再開
+
+1. `active_operation` の固定キーにある状態は0件または1件とする。登録・編集の開始は同ストアと `edit_drafts` を含む `readwrite` トランザクションで、状態がないことの確認、操作 ID の生成結果、世代1と初期途中入力の保存を一体で確定する。競合して後に実行された開始は既存状態を検出して拒否する。途中入力の保存が失敗した場合、操作を開始したと扱わない。
+2. 完了・未完了、削除、停止設定の変更は `active_operation` と変更先の全ストアを含む同一 `readwrite` トランザクションで状態がないことを確認してから変更する。登録・編集の保存は同ストア内の操作 ID と世代を照合し、対象の更新、途中入力と関連一時結果の削除、制限状態の解除を同一トランザクションで確定する。検証・版照合・書き込みの失敗ではすべて中止する。
+3. 途中入力の保存、撮影結果の反映、取消・破棄でも同一トランザクション内で現在の操作 ID と世代を照合する。取消・破棄は途中入力と関連する撮影結果の無効化・削除、制限状態の解除を一体で確定する。解除後に届く旧操作の要求は拒否する。進行中の撮影やページの復元を IndexedDB の確定だけで完了とみなさない。
+4. 画面終了や Service Worker・Chrome の停止では制限状態と保存済み入力を削除しない。利用者が再開したとき、操作 ID を維持したまま世代をトランザクション内で増やし、再開前の世代からの遅延書き込みを拒否する。再開処理と旧世代の処理は同じ `active_operation` を含むトランザクションで順序付け、先に確定した内容を保持する。同じトランザクションで確定済みの撮影結果が操作に属することを照合し、その世代を新しい世代へ更新して維持する。未完了の旧世代の撮影は無効化する。撮影の中止・復元が確認できなければその旨を表示する。世代の更新に失敗した場合は再開を成功扱いにしない。
+5. 画面は入力変更ごとに一時保存を要求し、同じ世代内では入力順に処理する。画面が保存完了前に閉じた場合は最後に保存成功した内容だけを再開する。保存の失敗時は理由と未保存状態を画面に示し、入力を保持する。複数画面での再開、破棄、保存と旧世代の遅延要求を実機で検証する。
+6. 同期的な状態変更も含め、タスク・画像・停止設定を変更するすべての経路が `active_operation` を含むトランザクションで制限を確認する。画面上のボタン制御や Worker のメモリ内フラグだけで制限しない。撮影結果の保存・反映には `active_operation` と `capture_temp`、必要な途中入力ストアを含め、操作 ID・世代と要求状態を同一トランザクションで照合する。
 
 ### 停止終了日時の変換案
 
@@ -143,6 +170,10 @@ interface TaskRepository {
 ### データベースの版管理・復旧案
 
 初回は版1としてストアと索引を作成し、以後のスキーマ変更ごとに版を上げる。`upgradeneeded` 内で旧版から必要な移行を順番に適用し、移行処理が失敗した場合は更新を確定しない（REF-036、REF-038）。各画面と Service Worker は `versionchange` を受けた場合、新たな読み書きを開始せず接続を閉じ、必要に応じて再接続する（REF-037）。
+
+現在の実装は版1である。単一操作制限の導入時は版2で `active_operation` を追加し、既存タスク・画像・停止設定を保持する。初回作成では版2の全ストアを作成する。版1からの更新では旧 `edit_drafts` と `capture_temp` の件数を移行トランザクション内で確認する。どちらも0件なら既存ストアを保持したまま `active_operation` を追加して版2を確定する。
+
+どちらかに旧形式のデータがある場合、その内容や所有者を推測せず、版更新を中止して版1と全データを保持する。画面には一時データを移行できず操作を開始できないことを表示し、自動削除・初期化しない。原因を区別できるエラーコードを返す。旧形式のデータを利用者が確認・復旧する手順は別途設計する。現在の版1実装にこれらの一時ストアを書き込む経路はないが、件数が0であると決めつけない。
 
 別の接続により移行が `blocked` となった場合は、利用者に拡張機能画面を閉じて再試行するよう表示する（REF-039）。上位版を読み取れない、移行できない、またはデータの読み込み・整合性確認に失敗した場合はエラーを表示し、空の一覧として扱わない。データベースの自動削除・初期化は行わない。破損原因の特定、利用者への復旧手順と各バージョンの具体的な移行内容は未決。
 
@@ -201,22 +232,24 @@ NFR-AVL-001 の検証では、各タスクの `TaskRecord` を上記のフィー
 - `Temporal` の利用可否・型定義、端末タイムゾーンの取得と日時変換の実機検証。
 - 同一ドメインに対する同時変更の完了順と表示内容を実機で検証すること。
 - 編集競合時の画面操作と、一時データを復旧・破棄する操作。
-- 撮影前の一時保存に必要な、入力途中の値を保持する型と検証・再開方法。
+- 入力文字数の上限、移行を中止した旧形式の一時データを利用者が確認・復旧する手順、および制限状態に対応する API のエラー型の具体化。
 - IndexedDB の各版の具体的な移行内容、破損原因の特定と利用者への復旧手順。
 - 撮影結果の一時データの所有者認証・中断時の整理手順と、撮影側の詳細設計との整合。
 
 ## 変更履歴
 
-| 日付       | 変更者 | 内容                                                       |
-| ---------- | ------ | ---------------------------------------------------------- |
-| 2026-11-23 | AI     | 初版案                                                     |
-| 2026-11-23 | AI     | 停止終了日時のタイムゾーン変更・夏時間の扱いを追加         |
-| 2026-11-23 | AI     | ドメイン停止設定をトランザクション内で更新する案を追加     |
-| 2026-11-23 | AI     | 撮影結果の IndexedDB を介した受け渡し案を追加              |
-| 2026-11-23 | AI     | 撮影結果の一時ストアのキー・所有者・状態を追加             |
-| 2026-11-23 | AI     | 停止終了日時の欠落・重複を検出する Temporal 利用案を追加   |
-| 2026-11-23 | AI     | 利用者が選択した時刻の入力単位と現在以前の日時の扱いを追加 |
-| 2026-11-23 | AI     | 撮影要求の無効化と遅延結果の書き込み防止案を追加           |
-| 2026-11-23 | AI     | IndexedDB の版更新・失敗時の扱いを整理                     |
-| 2026-11-23 | AI     | 入力途中の値と確定済みタスクの型の不一致を整理             |
-| 2026-11-23 | AI     | Temporal の選択肢を公式仕様と照合                          |
+| 日付       | 変更者 | 内容                                                                                                   |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| 2026-11-23 | AI     | 初版案                                                                                                 |
+| 2026-11-23 | AI     | 停止終了日時のタイムゾーン変更・夏時間の扱いを追加                                                     |
+| 2026-11-23 | AI     | ドメイン停止設定をトランザクション内で更新する案を追加                                                 |
+| 2026-11-23 | AI     | 撮影結果の IndexedDB を介した受け渡し案を追加                                                          |
+| 2026-11-23 | AI     | 撮影結果の一時ストアのキー・所有者・状態を追加                                                         |
+| 2026-11-23 | AI     | 停止終了日時の欠落・重複を検出する Temporal 利用案を追加                                               |
+| 2026-11-23 | AI     | 利用者が選択した時刻の入力単位と現在以前の日時の扱いを追加                                             |
+| 2026-11-23 | AI     | 撮影要求の無効化と遅延結果の書き込み防止案を追加                                                       |
+| 2026-11-23 | AI     | IndexedDB の版更新・失敗時の扱いを整理                                                                 |
+| 2026-11-23 | AI     | 入力途中の値と確定済みタスクの型の不一致を整理                                                         |
+| 2026-11-23 | AI     | Temporal の選択肢を公式仕様と照合                                                                      |
+| 2026-11-23 | AI     | BD-001 の単一操作制限、途中入力と再開時の世代管理案を追加し、再確認のため review に変更                |
+| 2026-11-23 | AI     | 版1から版2への移行条件と旧形式の一時データがある場合の安全側中止を具体化し、再確認のため review に変更 |

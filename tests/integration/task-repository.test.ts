@@ -1,15 +1,23 @@
+// @trace TS-001
 // @trace TS-002
 // @trace TS-003
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  commitDraft,
   createDomainSuppressionRepository,
   deleteTask,
+  discardDraft,
+  getActiveDraft,
   getTask,
   listTasks,
+  resumeDraft,
+  saveDraft,
   saveTask,
+  setTaskCompleted,
+  startDraft,
 } from "../../src/background/task-repository";
-import type { ImageRecord, TaskRecord } from "../../src/shared/task-types";
+import type { Draft, ImageRecord, TaskRecord } from "../../src/shared/task-types";
 
 function task(id = "task-1"): TaskRecord {
   return {
@@ -28,6 +36,17 @@ function task(id = "task-1"): TaskRecord {
 
 function image(id: string, taskId = "task-1", position = 0): ImageRecord {
   return { id, taskId, position, data: new Blob([id]) };
+}
+
+function registrationDraft(id = "draft-1", taskId = "task-1"): Draft {
+  return {
+    id,
+    kind: "registration",
+    taskId,
+    baseRevision: null,
+    fields: { name: "", url: "invalid", dueDate: "invalid", detail: "途中" },
+    images: [],
+  };
 }
 
 beforeEach(async () => {
@@ -121,6 +140,16 @@ describe("TS-002 タスクと画像の保存", () => {
     expect((await getTask(replacement.id))?.images.map((item) => item.id)).toEqual(["first"]);
   });
 
+  it("完了状態の変更では画像を保持し、版が古い要求は拒否する", async () => {
+    const saved = await saveTask(task(), [image("first")], null);
+    const completed = await setTaskCompleted(saved.id, saved.revision, true);
+    expect(completed).toMatchObject({ completed: true, revision: 2 });
+    expect((await getTask(saved.id))?.images.map((item) => item.id)).toEqual(["first"]);
+    await expect(setTaskCompleted(saved.id, saved.revision, false))
+      .rejects.toMatchObject({ code: "CONFLICT" });
+    expect((await getTask(saved.id))?.task.completed).toBe(true);
+  });
+
   it("不整合な保存データを空の一覧として扱わない", async () => {
     await saveTask(task(), [], null);
     await new Promise<void>((resolve, reject) => {
@@ -141,6 +170,160 @@ describe("TS-002 タスクと画像の保存", () => {
       };
     });
     await expect(listTasks()).rejects.toMatchObject({ code: "CORRUPT_DATA" });
+  });
+});
+
+describe("TS-002 登録・編集の制限と再開", () => {
+  it("並行開始は1件だけ成功し、対応する途中入力だけを残す", async () => {
+    const first = registrationDraft();
+    const second = registrationDraft("draft-2", "task-2");
+    const results = await Promise.allSettled([startDraft(first), startDraft(second)]);
+    const succeeded = results.filter((result) => result.status === "fulfilled");
+    const failed = results.filter((result) => result.status === "rejected");
+    expect(succeeded).toHaveLength(1);
+    expect(failed).toHaveLength(1);
+    expect(failed[0]).toMatchObject({ reason: { code: "OPERATION_ACTIVE" } });
+    const winner = succeeded[0];
+    if (!winner || winner.status !== "fulfilled") throw new Error("開始成功の結果がありません。");
+    const active = await getActiveDraft();
+    expect(active?.draft).toEqual(results[0]?.status === "fulfilled" ? first : second);
+    expect(active?.operation).toEqual(winner.value);
+  });
+
+  it("再開と破棄後の旧世代を拒否し、最後に保存した入力を保持する", async () => {
+    const draft = registrationDraft();
+    const first = await startDraft(draft);
+    const saved = { ...draft, fields: { ...draft.fields, detail: "保存済み" } };
+    await saveDraft(first, saved);
+    const resumed = await resumeDraft(first);
+    expect(resumed).toEqual({ id: first.id, generation: first.generation + 1 });
+    await expect(saveDraft(first, draft)).rejects.toMatchObject({ code: "STALE_OPERATION" });
+    expect((await getActiveDraft())?.draft).toEqual(saved);
+    await discardDraft(resumed);
+    await expect(saveDraft(resumed, draft)).rejects.toMatchObject({ code: "STALE_OPERATION" });
+    expect(await getActiveDraft()).toBeNull();
+  });
+
+  it("途中入力の不正値は保持し、確定失敗時に制限状態を解除しない", async () => {
+    const draft = registrationDraft();
+    const operation = await startDraft(draft);
+    await expect(commitDraft(operation)).rejects.toMatchObject({ code: "INVALID_TASK" });
+    expect((await getActiveDraft())?.draft).toEqual(draft);
+    expect(await listTasks()).toEqual([]);
+    await saveDraft(operation, {
+      ...draft,
+      fields: { name: "登録", url: "https://example.com/a", dueDate: "", detail: "" },
+      images: [image("image-1")],
+    });
+    const saved = await commitDraft(operation);
+    expect(saved.hostname).toBe("example.com");
+    expect((await getTask(saved.id))?.images.map((item) => item.id)).toEqual(["image-1"]);
+    expect(await getActiveDraft()).toBeNull();
+  });
+
+  it("編集中の他の変更を拒否し、取消後に再び変更できる", async () => {
+    const saved = await saveTask(task(), [], null);
+    const operation = await startDraft({
+      ...registrationDraft(),
+      kind: "edit",
+      baseRevision: saved.revision,
+    });
+    const suppressions = createDomainSuppressionRepository((hostname) => ({ kind: "host", value: hostname }));
+    await expect(saveTask({ ...saved, completed: true }, [], saved.revision))
+      .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
+    await expect(setTaskCompleted(saved.id, saved.revision, true))
+      .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
+    await expect(deleteTask(saved.id, saved.revision))
+      .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
+    await expect(suppressions.updateDomainSuppression("example.com", "2099-01-01T00:00:00.000Z"))
+      .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
+    expect((await getTask(saved.id))?.task).toEqual(saved);
+    await discardDraft(operation);
+    await deleteTask(saved.id, saved.revision);
+    expect(await getTask(saved.id)).toBeNull();
+  });
+
+  it("画像の書き込み失敗時は既存データと途中入力を保持する", async () => {
+    const saved = await saveTask(task(), [image("old")], null);
+    const draft: Draft = {
+      ...registrationDraft(),
+      kind: "edit",
+      baseRevision: saved.revision,
+      fields: { name: "編集後", url: saved.url, dueDate: "", detail: "" },
+      images: [image("new")],
+    };
+    const operation = await startDraft(draft);
+    const put = vi.spyOn(IDBObjectStore.prototype, "put").mockImplementationOnce(() => {
+      throw new DOMException("保存領域の空き容量が不足しています。", "QuotaExceededError");
+    });
+    try {
+      await expect(commitDraft(operation)).rejects.toMatchObject({ name: "QuotaExceededError" });
+    } finally {
+      put.mockRestore();
+    }
+    expect(await getTask(saved.id)).toMatchObject({
+      task: { name: "テスト", revision: saved.revision },
+      images: [{ id: "old" }],
+    });
+    expect((await getActiveDraft())?.draft).toEqual(draft);
+    const updated = await commitDraft(operation);
+    expect(updated).toMatchObject({ name: "編集後", revision: saved.revision + 1 });
+    expect((await getTask(saved.id))?.images.map((item) => item.id)).toEqual(["new"]);
+    expect(await getActiveDraft()).toBeNull();
+  });
+
+  it("別タスクや画像と衝突する一時データを拒否する", async () => {
+    await saveTask(task(), [image("old")], null);
+    await expect(startDraft(registrationDraft("old", "new-task")))
+      .rejects.toMatchObject({ code: "INVALID_DRAFT" });
+    const draft = registrationDraft("draft-2", "task-2");
+    const operation = await startDraft(draft);
+    await expect(saveDraft(operation, { ...draft, images: [image("old", "task-2")] }))
+      .rejects.toMatchObject({ code: "INVALID_IMAGES" });
+    expect((await getActiveDraft())?.draft).toEqual(draft);
+  });
+
+  it("再開時に完了済み撮影結果を引き継ぎ、未完了結果を無効化する", async () => {
+    const draft = registrationDraft();
+    const operation = await startDraft(draft);
+    async function captures(write: boolean): Promise<unknown[]> {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("task-management");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction("capture_temp", write ? "readwrite" : "readonly");
+          const store = transaction.objectStore("capture_temp");
+          if (write) {
+            for (const status of ["pending", "ready", "error"]) {
+              store.put({
+                requestId: status,
+                owner: { kind: "registration", id: draft.id },
+                operation,
+                status,
+              });
+            }
+          }
+          const all = store.getAll();
+          transaction.oncomplete = () => {
+            database.close();
+            resolve(all.result);
+          };
+          transaction.onabort = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      });
+    }
+    await captures(true);
+    const resumed = await resumeDraft(operation);
+    expect(await captures(false)).toMatchObject([
+      { requestId: "error", operation: resumed },
+      { requestId: "ready", operation: resumed },
+    ]);
+    await discardDraft(resumed);
+    expect(await captures(false)).toEqual([]);
   });
 });
 

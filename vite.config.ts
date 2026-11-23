@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         background: resolve(__dirname, 'src/background/service-worker.ts'),
         popup: resolve(__dirname, 'src/popup/index.html'),
+        registration: resolve(__dirname, 'src/registration/index.html'),
         options: resolve(__dirname, 'src/options/index.html'),
       },
       output: {

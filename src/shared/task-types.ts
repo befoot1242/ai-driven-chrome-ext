@@ -24,3 +24,24 @@ export interface DomainSuppressionRecord {
   hostname: string;
   suppressedUntil: string;
 }
+
+export interface DraftFields {
+  name: string;
+  url: string;
+  dueDate: string;
+  detail: string;
+}
+
+export interface Draft {
+  id: string;
+  kind: "registration" | "edit";
+  taskId: string;
+  baseRevision: number | null;
+  fields: DraftFields;
+  images: ImageRecord[];
+}
+
+export interface OperationRef {
+  id: string;
+  generation: number;
+}

@@ -4,6 +4,13 @@
   "version": "0.1.0",
   "description": "TODO: 説明",
   "minimum_chrome_version": "120",
+  "permissions": ["activeTab"],
+  "commands": {
+    "open-registration": {
+      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "description": "閲覧中のページのタスクを登録する"
+    }
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"

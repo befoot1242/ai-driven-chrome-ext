@@ -7,6 +7,12 @@ const MESSAGE_KINDS: ReadonlySet<string> = new Set<MessageKind>([
   "TASK_SAVE",
   "TASK_DELETE",
   "SUPPRESSION_UPDATE",
+  "START_DRAFT",
+  "GET_ACTIVE_DRAFT",
+  "SAVE_DRAFT",
+  "RESUME_DRAFT",
+  "DISCARD_DRAFT",
+  "COMMIT_DRAFT",
   "CAPTURE_REQUEST",
   "CAPTURE_RESULT",
   "CAPTURE_SCROLL",
@@ -32,4 +38,30 @@ export function rejectUnavailableRequest(request: unknown): MessageErrorResponse
     return { requestId, ok: false, code: "INVALID_REQUEST" };
   }
   return { requestId, ok: false, code: "OPERATION_UNAVAILABLE" };
+}
+
+export function isExtensionPageSender(
+  sender: chrome.runtime.MessageSender,
+  extensionId: string,
+  extensionOrigin: string,
+  path: string,
+): boolean {
+  if (sender.id !== extensionId || sender.origin !== extensionOrigin || !sender.url) return false;
+  try {
+    const url = new URL(sender.url);
+    return url.protocol === "chrome-extension:" &&
+      url.host === extensionId &&
+      url.pathname === path;
+  } catch (error) {
+    if (error instanceof TypeError) return false;
+    throw error;
+  }
+}
+
+export function isPopupSender(
+  sender: chrome.runtime.MessageSender,
+  extensionId: string,
+  extensionOrigin: string,
+): boolean {
+  return isExtensionPageSender(sender, extensionId, extensionOrigin, "/popup/index.html");
 }

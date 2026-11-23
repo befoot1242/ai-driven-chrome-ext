@@ -5,3 +5,7 @@ export function registerMessageListener(
 ): void {
   chrome.runtime.onMessage.addListener(listener);
 }
+
+export function getRuntimeIdentity(): { id: string; origin: string } {
+  return { id: chrome.runtime.id, origin: chrome.runtime.getURL("").replace(/\/$/, "") };
+}

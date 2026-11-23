@@ -6,6 +6,12 @@ export type MessageKind =
   | "TASK_SAVE"
   | "TASK_DELETE"
   | "SUPPRESSION_UPDATE"
+  | "START_DRAFT"
+  | "GET_ACTIVE_DRAFT"
+  | "SAVE_DRAFT"
+  | "RESUME_DRAFT"
+  | "DISCARD_DRAFT"
+  | "COMMIT_DRAFT"
   | "CAPTURE_REQUEST"
   | "CAPTURE_RESULT"
   | "CAPTURE_SCROLL"
@@ -14,5 +20,5 @@ export type MessageKind =
 export interface MessageErrorResponse {
   requestId: string;
   ok: false;
-  code: "INVALID_REQUEST" | "OPERATION_UNAVAILABLE";
+  code: string;
 }

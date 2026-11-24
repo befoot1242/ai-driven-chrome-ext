@@ -1,6 +1,6 @@
 // @trace DD-communication-001 DD-task-002
 import { sendRuntimeMessage } from "../shared/chrome/runtime-message";
-import type { DraftFields, OperationRef, TaskRecord } from "../shared/task-types";
+import type { DomainSuppressionRecord, DraftFields, OperationRef, TaskRecord } from "../shared/task-types";
 
 export interface ActiveDraftView {
   operation: OperationRef;
@@ -59,6 +59,16 @@ export async function queryTasks(): Promise<TaskRecord[]> {
     throw new PopupOperationError("COMMUNICATION_FAILED");
   }
   return payload.tasks;
+}
+
+export async function queryDomainSuppressions(): Promise<DomainSuppressionRecord[]> {
+  const payload = await request("TASK_QUERY", { kind: "domain-suppressions" });
+  if (!isRecord(payload) || !Array.isArray(payload.suppressions) ||
+    !payload.suppressions.every((item: unknown) =>
+      isRecord(item) && typeof item.hostname === "string" && typeof item.suppressedUntil === "string")) {
+    throw new PopupOperationError("COMMUNICATION_FAILED");
+  }
+  return payload.suppressions;
 }
 
 export async function queryActiveDraft(): Promise<ActiveDraftView | null> {
@@ -125,6 +135,10 @@ export function operationErrorMessage(error: unknown): string {
       return "保存データの更新を待っています。別の拡張機能画面を閉じて再試行してください。";
     case "STORAGE_FULL":
       return "保存領域の空き容量が不足しています。入力は保持されています。";
+    case "INVALID_SUPPRESSION":
+      return "停止終了日時には、現在より後の日時を入力してください。";
+    case "INVALID_DOMAIN":
+      return "対象ドメインが変更されています。一覧を開き直してください。";
     case "COMMUNICATION_FAILED":
       return "結果を確認できませんでした。再読み込みして状態を確認してください。";
     default:

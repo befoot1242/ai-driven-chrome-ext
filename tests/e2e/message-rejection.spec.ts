@@ -30,10 +30,10 @@ test.describe("TS-004 通信要求の補助確認", () => {
     expect(response).toEqual({ requestId: "test", ok: false, code: "UNAUTHORIZED" });
   });
 
-  test("登録画面から一覧・削除の要求を受け付けない", async ({ extensionContext, extensionId }) => {
+  test("登録画面から一覧・削除・停止設定の要求を受け付けない", async ({ extensionContext, extensionId }) => {
     const page = await extensionContext.newPage();
     await page.goto(`chrome-extension://${extensionId}/registration/index.html`);
-    for (const kind of ["TASK_QUERY", "TASK_DELETE"]) {
+    for (const kind of ["TASK_QUERY", "TASK_DELETE", "SUPPRESSION_UPDATE"]) {
       const response: unknown = await page.evaluate((requestKind) =>
         chrome.runtime.sendMessage({
           version: 1,

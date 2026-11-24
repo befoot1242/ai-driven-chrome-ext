@@ -37,6 +37,11 @@ textarea {
   margin-top: 4px;
 }
 
+input[type="radio"] {
+  display: inline-block;
+  width: auto;
+}
+
 .thumbnail {
   display: block;
   max-width: 100%;

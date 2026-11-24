@@ -595,6 +595,40 @@ export async function setTaskCompleted(
   );
 }
 
+export async function setTaskSuppression(
+  id: string,
+  expectedRevision: number,
+  suppressedUntil: string | null,
+): Promise<TaskRecord> {
+  if (suppressedUntil !== null && !isUtcInstant(suppressedUntil)) {
+    throw new TaskRepositoryError("INVALID_SUPPRESSION");
+  }
+  return transactionResult(
+    ["tasks", "images", "edit_drafts", "capture_temp", "active_operation"],
+    "readwrite",
+    async (transaction) => {
+      await assertNoActiveOperation(transaction);
+      if (suppressedUntil !== null && Date.parse(suppressedUntil) <= Date.now()) {
+        throw new TaskRepositoryError("INVALID_SUPPRESSION");
+      }
+      const record = await requestResult<unknown>(transaction.objectStore("tasks").get(id));
+      if (record === undefined) throw new TaskRepositoryError("NOT_FOUND");
+      const task = readStoredTask(record);
+      const values = await requestResult<unknown[]>(
+        transaction.objectStore("images").index("taskId").getAll(id),
+      );
+      const images = readStoredImages(values, task);
+      return writeTask(
+        transaction,
+        { ...task, reminderSuppressedUntil: suppressedUntil },
+        images,
+        expectedRevision,
+        task.hostname,
+      );
+    },
+  );
+}
+
 async function writeTask(
   transaction: IDBTransaction,
   task: TaskRecord,

@@ -1,7 +1,7 @@
 // @trace DD-task-002 DD-communication-001
 import { computed, createApp, h, nextTick, onMounted, ref } from "vue";
 import { getDomainKeyFromHostname } from "../shared/domain";
-import type { DomainKey } from "../shared/domain-types";
+import { sameDomainKey, type DomainKey } from "../shared/domain-types";
 import { createTaskListView, isTaskOverdue, type TaskListFilter } from "../shared/task-display";
 import type { OperationRef, TaskRecord } from "../shared/task-types";
 import { TaskEditor } from "./editor";
@@ -9,11 +9,13 @@ import {
   operationErrorMessage,
   PopupOperationError,
   queryActiveDraft,
+  queryDomainSuppressions,
   queryTasks,
   readOperationResult,
   request,
   type ActiveDraftView,
 } from "./popup-api";
+import { SuppressionEditor, type SuppressionTarget } from "./suppression";
 import "./popup.css";
 
 type Confirmation = { kind: "task"; task: TaskRecord } | { kind: "draft"; active: ActiveDraftView };
@@ -28,6 +30,7 @@ createApp({
     const tasks = ref<TaskRecord[]>([]);
     const active = ref<ActiveDraftView | null>(null);
     const editing = ref<ActiveDraftView | null>(null);
+    const suppression = ref<SuppressionTarget | null>(null);
     const confirmation = ref<Confirmation | null>(null);
     const completion = ref<TaskListFilter["completion"]>("all");
     const domain = ref<DomainKey | null>(null);
@@ -157,6 +160,34 @@ createApp({
       }
     }
 
+    function openTaskSuppression(task: TaskRecord): void {
+      if (busy.value || blockedByActive()) return;
+      suppression.value = { kind: "task", task };
+    }
+
+    async function openDomainSuppression(): Promise<void> {
+      if (busy.value || !domain.value || blockedByActive()) return;
+      busy.value = true;
+      message.value = "";
+      try {
+        const selected = domain.value;
+        if (!sameDomainKey(selected, getDomainKeyFromHostname(selected.value))) {
+          throw new PopupOperationError("INVALID_DOMAIN");
+        }
+        const matching = (await queryDomainSuppressions())
+          .filter((entry) => sameDomainKey(selected, getDomainKeyFromHostname(entry.hostname)));
+        const until = matching.reduce<string | null>(
+          (latest, entry) => latest === null || entry.suppressedUntil > latest ? entry.suppressedUntil : latest,
+          null,
+        );
+        suppression.value = { kind: "domain", domain: selected, until };
+      } catch (error) {
+        await showFailure(error);
+      } finally {
+        busy.value = false;
+      }
+    }
+
     async function confirm(value: Confirmation): Promise<void> {
       if (busy.value || (value.kind === "task" && blockedByActive())) return;
       confirmation.value = value;
@@ -204,10 +235,18 @@ createApp({
       await loadTasks();
     }
 
+    async function finishSuppression(): Promise<void> {
+      suppression.value = null;
+      await loadTasks();
+    }
+
     onMounted(loadTasks);
 
     return () => {
       if (editing.value) return h(TaskEditor, { active: editing.value, onFinished: finishEditing });
+      if (suppression.value) {
+        return h(SuppressionEditor, { target: suppression.value, onFinished: finishSuppression });
+      }
       if (confirmation.value) {
         const current = confirmation.value;
         return h("section", {
@@ -270,6 +309,10 @@ createApp({
                   ...list.value.domains.map((option) => h("option", { value: domainValue(option.key) }, option.label)),
                 ]),
               ]),
+              domain.value ? h("button", {
+                type: "button", disabled: busy.value, "data-testid": "domain-suppression",
+                onClick: openDomainSuppression,
+              }, "対象ドメインのリマインド停止") : null,
               list.value.emptyState
                 ? h("p", { "data-testid": "task-empty" }, list.value.emptyState === "no-tasks"
                   ? "タスクはありません。" : "条件に一致するタスクはありません。")
@@ -284,6 +327,8 @@ createApp({
                     h("button", { type: "button", disabled: busy.value,
                       "data-testid": "task-toggle", onClick: () => toggle(task) },
                     task.completed ? "未完了にする" : "完了にする"),
+                    h("button", { type: "button", disabled: busy.value,
+                      "data-testid": "task-suppression", onClick: () => openTaskSuppression(task) }, "リマインド停止"),
                     h("button", { type: "button", disabled: busy.value,
                       ref: (element: unknown) => {
                         if (element instanceof HTMLButtonElement) deleteButtons.set(task.id, element);

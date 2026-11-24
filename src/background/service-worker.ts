@@ -4,6 +4,8 @@ import {
   indicateRegistrationFailure,
   registerCommandListener,
 } from "../shared/chrome/registration";
+import { getDomainKeyFromHostname } from "../shared/domain";
+import { sameDomainKey } from "../shared/domain-types";
 import type { DraftFields, OperationRef } from "../shared/task-types";
 import { isExtensionPageSender, isPopupSender, rejectUnavailableRequest } from "./message-router";
 import { beginRegistration } from "./registration-controller";
@@ -11,11 +13,13 @@ import {
   commitDraft,
   deleteTask,
   discardDraft,
+  domainSuppressionRepository,
   getActiveDraft,
   getTask,
   listTasks,
   resumeDraft,
   setTaskCompleted,
+  setTaskSuppression,
   startDraft,
   TaskRepositoryError,
   updateDraftFields,
@@ -55,6 +59,9 @@ function readTaskTarget(value: unknown): { id: string; expectedRevision: number 
 
 async function handlePopupRequest(kind: string, payload: unknown): Promise<unknown> {
   if (kind === "TASK_QUERY" && payload === null) return { tasks: await listTasks() };
+  if (kind === "TASK_QUERY" && isRecord(payload) && payload.kind === "domain-suppressions") {
+    return { suppressions: await domainSuppressionRepository.listDomainSuppressions() };
+  }
   if (kind === "GET_ACTIVE_DRAFT" && payload === null) {
     const active = await getActiveDraft();
     return {
@@ -80,6 +87,30 @@ async function handlePopupRequest(kind: string, payload: unknown): Promise<unkno
     const target = readTaskTarget(payload);
     await deleteTask(target.id, target.expectedRevision);
     return null;
+  }
+  if (kind === "SUPPRESSION_UPDATE") {
+    if (!isRecord(payload) || (payload.until !== null && typeof payload.until !== "string")) {
+      throw new InvalidRequestError();
+    }
+    if (payload.kind === "task") {
+      const target = readTaskTarget(payload);
+      await setTaskSuppression(target.id, target.expectedRevision, payload.until);
+      return null;
+    }
+    if (
+      payload.kind === "domain" && typeof payload.hostname === "string" && payload.hostname &&
+      isRecord(payload.domain) &&
+      (payload.domain.kind === "domain" || payload.domain.kind === "host") &&
+      typeof payload.domain.value === "string"
+    ) {
+      const current = getDomainKeyFromHostname(payload.hostname);
+      if (!sameDomainKey(current, { kind: payload.domain.kind, value: payload.domain.value })) {
+        throw new TaskRepositoryError("INVALID_DOMAIN");
+      }
+      await domainSuppressionRepository.updateDomainSuppression(payload.hostname, payload.until);
+      return null;
+    }
+    throw new InvalidRequestError();
   }
   if (kind === "START_DRAFT") {
     if (!isRecord(payload) || typeof payload.id !== "string" || !payload.id) throw new InvalidRequestError();
@@ -121,7 +152,7 @@ async function handlePopupRequest(kind: string, payload: unknown): Promise<unkno
 }
 
 const POPUP_OPERATIONS = new Set([
-  "TASK_QUERY", "TASK_SAVE", "TASK_DELETE", "START_DRAFT", "GET_ACTIVE_DRAFT",
+  "TASK_QUERY", "TASK_SAVE", "TASK_DELETE", "SUPPRESSION_UPDATE", "START_DRAFT", "GET_ACTIVE_DRAFT",
   "SAVE_DRAFT", "RESUME_DRAFT", "DISCARD_DRAFT", "COMMIT_DRAFT",
 ]);
 const REGISTRATION_OPERATIONS = new Set([

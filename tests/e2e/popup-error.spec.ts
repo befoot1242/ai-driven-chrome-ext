@@ -38,6 +38,62 @@ test.describe("TS-002 一覧表示と取得エラー", () => {
     await expect(error).toBeFocused();
   });
 
+  test("版更新の待機を通知し、接続を閉じた後の再試行で既存データを表示する", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const holder = await extensionContext.newPage();
+    await holder.goto(`chrome-extension://${extensionId}/options/index.html`);
+    await holder.evaluate(async () => new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("task-management", 1);
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        const tasks = database.createObjectStore("tasks", { keyPath: "id" });
+        database.createObjectStore("images", { keyPath: "id" }).createIndex("taskId", "taskId");
+        database.createObjectStore("domain_suppressions", { keyPath: "hostname" });
+        database.createObjectStore("edit_drafts", { keyPath: "id" });
+        database.createObjectStore("capture_temp", { keyPath: "requestId" })
+          .createIndex("owner", ["owner.kind", "owner.id"]);
+        tasks.put({
+          id: "task-1", url: "https://example.com/", hostname: "example.com",
+          name: "保存済みタスク", dueDate: null, detail: "", completed: false,
+          createdAt: "2026-01-01T00:00:00.000Z", reminderSuppressedUntil: null, revision: 1,
+        });
+      };
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        (globalThis as typeof globalThis & { heldTestDatabase?: IDBDatabase }).heldTestDatabase = request.result;
+        resolve();
+      };
+    }));
+
+    const popup = await extensionContext.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup/index.html`);
+    await expect(popup.getByTestId("task-error")).toContainText("保存データの更新を待っています");
+    await expect(popup.getByTestId("task-empty")).toHaveCount(0);
+
+    await holder.evaluate(() => {
+      const state = globalThis as typeof globalThis & { heldTestDatabase?: IDBDatabase };
+      if (!state.heldTestDatabase) throw new Error("試験用の接続が見つかりません。");
+      state.heldTestDatabase.close();
+      delete state.heldTestDatabase;
+    });
+    await popup.getByTestId("task-retry").click();
+    await expect(popup.getByTestId("task-item")).toHaveCount(1);
+    await expect(popup.getByTestId("task-item")).toContainText("保存済みタスク");
+    const version = await holder.evaluate(async () => new Promise<number>((resolve, reject) => {
+      const request = indexedDB.open("task-management");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const result = database.version;
+        database.close();
+        resolve(result);
+      };
+    }));
+    expect(version).toBe(2);
+  });
+
   test("拡張機能アイコンのポップアップで空の一覧を表示する", async ({
     extensionContext,
     extensionId,

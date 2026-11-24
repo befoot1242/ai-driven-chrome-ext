@@ -11,6 +11,7 @@ interface ZonedDateTimeValue {
 }
 
 interface TemporalApi {
+  Now: { timeZoneId(): string };
   ZonedDateTime: {
     from(
       fields: {
@@ -31,6 +32,13 @@ declare const Temporal: TemporalApi | undefined;
 export interface LocalTimeCandidate {
   instant: string;
   offset: string;
+}
+
+export function getCurrentTimeZone(): string {
+  if (typeof Temporal === "undefined") {
+    throw new Error("日時の変換機能を利用できません。");
+  }
+  return Temporal.Now.timeZoneId();
 }
 
 export function getLocalTimeCandidates(

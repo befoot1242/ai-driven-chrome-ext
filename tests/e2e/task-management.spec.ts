@@ -1,5 +1,7 @@
 // @trace TS-002 TS-004
-import type { Page } from "@playwright/test";
+import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
+import { chromium, type BrowserContext, type Page } from "@playwright/test";
 import { expect, test } from "./extension-fixture";
 
 async function seed(page: Page, extensionId: string): Promise<void> {
@@ -300,6 +302,91 @@ test.describe("TS-002 一覧からのタスク管理", () => {
     await reopened.getByTestId("task-edit").click();
     await expect(reopened.getByTestId("edit-name")).toHaveValue("元のタスク");
     await reopened.getByTestId("edit-cancel").click();
+  });
+
+  test("ブラウザー再起動後もタスクと画像、編集中の入力と制限を保持する", async ({ headless }, testInfo) => {
+    const profile = testInfo.outputPath("restart-profile");
+    const extensionPath = resolve("dist");
+    let context: BrowserContext | undefined;
+    const launch = () => chromium.launchPersistentContext(profile, {
+      channel: "chromium",
+      headless,
+      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+    });
+    const getExtensionId = async (browserContext: BrowserContext): Promise<string> => {
+      const worker = browserContext.serviceWorkers()[0] ?? await browserContext.waitForEvent("serviceworker");
+      return new URL(worker.url()).host;
+    };
+
+    try {
+      context = await launch();
+      const extensionId = await getExtensionId(context);
+      const page = await context.newPage();
+      await seed(page, extensionId);
+      await page.getByTestId("task-edit").click();
+      await expect(page.getByAltText("画像1")).toBeVisible();
+      const image = await page.getByAltText("画像1").evaluate(async (element) => {
+        if (!(element instanceof HTMLImageElement)) throw new Error("画像を取得できません。");
+        return Array.from(new Uint8Array(await (await fetch(element.src)).arrayBuffer()));
+      });
+      await page.getByTestId("edit-name").fill("再起動前の途中入力");
+      await page.getByTestId("edit-detail").fill("保存した詳細");
+      await expect(page.getByTestId("draft-status")).toHaveText("保存済み");
+      await context.close();
+      context = undefined;
+
+      context = await launch();
+      expect(await getExtensionId(context)).toBe(extensionId);
+      const reopened = await context.newPage();
+      await reopened.goto(`chrome-extension://${extensionId}/popup/index.html`);
+      await expect(reopened.getByTestId("task-item")).toContainText("元のタスク");
+      await expect(reopened.getByTestId("active-draft")).toBeVisible();
+      const savedImage = await reopened.evaluate(async () => {
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          const request = indexedDB.open("task-management");
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const database = request.result;
+            const transaction = database.transaction("images", "readonly");
+            const imageRequest = transaction.objectStore("images").get("image-1");
+            transaction.oncomplete = () => {
+              const value: unknown = imageRequest.result;
+              database.close();
+              if (typeof value !== "object" || value === null || !("data" in value) ||
+                !(value.data instanceof Blob)) {
+                reject(new Error("保存済み画像を取得できません。"));
+                return;
+              }
+              resolve(value.data);
+            };
+            transaction.onabort = () => {
+              database.close();
+              reject(transaction.error);
+            };
+          };
+        });
+        return Array.from(new Uint8Array(await blob.arrayBuffer()));
+      });
+      expect(savedImage).toEqual(image);
+      await reopened.getByTestId("task-toggle").click();
+      await expect(reopened.getByTestId("task-operation-error")).toContainText("進行中");
+      await reopened.getByTestId("draft-resume").click();
+      await expect(reopened.getByTestId("edit-name")).toHaveValue("再起動前の途中入力");
+      await expect(reopened.getByTestId("edit-detail")).toHaveValue("保存した詳細");
+      await expect(reopened.getByAltText("画像1")).toBeVisible();
+      const restoredImage = await reopened.getByAltText("画像1").evaluate(async (element) => {
+        if (!(element instanceof HTMLImageElement)) throw new Error("画像を取得できません。");
+        return Array.from(new Uint8Array(await (await fetch(element.src)).arrayBuffer()));
+      });
+      expect(restoredImage).toEqual(image);
+      await reopened.getByTestId("edit-cancel").click();
+      await expect(reopened.getByTestId("active-draft")).toHaveCount(0);
+      await reopened.getByTestId("task-toggle").click();
+      await expect(reopened.getByTestId("task-toggle")).toHaveText("未完了にする");
+    } finally {
+      if (context) await context.close();
+      await rm(profile, { recursive: true, force: true });
+    }
   });
 
   test("完了状態を保存し、削除の取消と確認で画像も含めて扱う", async ({ extensionContext, extensionId }) => {

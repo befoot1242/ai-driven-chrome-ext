@@ -15,6 +15,7 @@ import {
   saveDraft,
   saveTask,
   setTaskCompleted,
+  setTaskSuppression,
   startDraft,
 } from "../../src/background/task-repository";
 import type { Draft, ImageRecord, TaskRecord } from "../../src/shared/task-types";
@@ -233,6 +234,8 @@ describe("TS-002 登録・編集の制限と再開", () => {
       .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
     await expect(setTaskCompleted(saved.id, saved.revision, true))
       .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
+    await expect(setTaskSuppression(saved.id, saved.revision, "2099-01-01T00:00:00.000Z"))
+      .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
     await expect(deleteTask(saved.id, saved.revision))
       .rejects.toMatchObject({ code: "OPERATION_ACTIVE" });
     await expect(suppressions.updateDomainSuppression("example.com", "2099-01-01T00:00:00.000Z"))
@@ -354,6 +357,26 @@ describe("TS-003 ドメイン停止設定の保存", () => {
   });
 
   describe("TS-003 タスク停止設定の保存", () => {
+    it("設定・解除で画像を保持し、古い版と現在以前の日時を拒否する", async () => {
+      const saved = await saveTask(task(), [image("first")], null);
+      const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-23T12:00:00.000Z"));
+      try {
+        for (const until of ["2026-11-23T11:59:59.999Z", "2026-11-23T12:00:00.000Z"]) {
+          await expect(setTaskSuppression(saved.id, saved.revision, until))
+            .rejects.toMatchObject({ code: "INVALID_SUPPRESSION" });
+        }
+        const updated = await setTaskSuppression(saved.id, saved.revision, "2026-11-23T12:00:00.001Z");
+        await expect(setTaskSuppression(saved.id, saved.revision, null))
+          .rejects.toMatchObject({ code: "CONFLICT" });
+        const cleared = await setTaskSuppression(saved.id, updated.revision, null);
+        expect(cleared.reminderSuppressedUntil).toBeNull();
+        const result = await getTask(saved.id);
+        expect(result?.images.map((item) => item.id)).toEqual(["first"]);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
     it("現在以前の停止終了日時を拒否し、直後の日時を受け付ける", async () => {
       const saved = await saveTask(task(), [], null);
       const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-23T12:00:00.000Z"));
